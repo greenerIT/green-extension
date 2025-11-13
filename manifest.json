@@ -1,0 +1,17 @@
+{
+  "manifest_version": 3,
+  "name": "Green Extension",
+  "version": "0.2",
+  "description": "Tracks CO₂ emissions from Google Drive file downloads and shows total in a popup.",
+  "permissions": ["downloads", "storage"],
+  "host_permissions": ["https://drive.google.com/*"],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Green Extension"
+  }
+}
+
