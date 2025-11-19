@@ -83,6 +83,26 @@ chrome.downloads.onChanged.addListener(async (delta) => {
   }
 });
 
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.type === 'EMAIL_SENT') {
+    // 1 e-posta için CO2 tahmini (gram)
+    // İstersen bu değeri sonra değiştirirsin.
+    const emissionPerEmail = 0.10; // örnek: 0.004 gram
+
+    const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+    const key = `daily_${today}`;
+
+    chrome.storage.local.get([key], (result) => {
+      const current = result[key] || 0;
+      const updated = current + emissionPerEmail;
+
+      chrome.storage.local.set({ [key]: updated }, () => {
+        console.log('CO2 updated for email send:', updated);
+      });
+    });
+  }
+});
+
 chrome.runtime.onInstalled.addListener(() => {
   chrome.storage.local.set({ events: [] });
   console.log("Green Extension installed and initialized.");
