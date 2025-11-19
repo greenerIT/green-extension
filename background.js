@@ -71,7 +71,6 @@ chrome.downloads.onChanged.addListener(async (delta) => {
     const { [key]: current = 0 } = await chrome.storage.local.get(key);
     await chrome.storage.local.set({ [key]: current + log.co2_g });
 
-    console.log(`✅ Logged ${log.co2_g} g CO₂ for ${item.filename}`);
 
   //FIXME: Popup is not automatically opening up 
     await chrome.action.openPopup();
@@ -86,7 +85,7 @@ chrome.downloads.onChanged.addListener(async (delta) => {
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'EMAIL_SENT') {
 
-    //FIXME: this measurement is a really rough example , TO BE CHANGEDDs
+    //FIXME: this measurement is a really rough example , TO BE CHANGEDD
     const emissionPerEmail = 0.10; 
 
     const today = new Date().toISOString().slice(0, 10); 
