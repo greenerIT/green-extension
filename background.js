@@ -46,7 +46,7 @@ chrome.downloads.onChanged.addListener(async (delta) => {
     const url = downloadMap.get(delta.id)?.url || item.finalUrl || item.url || "";
     const domain = getDomain(url);
 
-    //FIXME: that is only for "google" containing domains for now 
+
     if (!domain.includes("google")) return;
 
     const totalBytes = item.totalBytes || item.bytesReceived || 0;
@@ -65,7 +65,7 @@ chrome.downloads.onChanged.addListener(async (delta) => {
 
     await logEvent(log);
 
-  //TODO: Is it total or per activity
+  //TODO: Decide -> total or per activity
     const today = new Date().toISOString().slice(0, 10);
     const key = `daily_${today}`;
     const { [key]: current = 0 } = await chrome.storage.local.get(key);
@@ -85,11 +85,11 @@ chrome.downloads.onChanged.addListener(async (delta) => {
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'EMAIL_SENT') {
-    // 1 e-posta için CO2 tahmini (gram)
-    // İstersen bu değeri sonra değiştirirsin.
-    const emissionPerEmail = 0.10; // örnek: 0.004 gram
 
-    const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+    //FIXME: this measurement is a really rough example , TO BE CHANGEDDs
+    const emissionPerEmail = 0.10; 
+
+    const today = new Date().toISOString().slice(0, 10); 
     const key = `daily_${today}`;
 
     chrome.storage.local.get([key], (result) => {
