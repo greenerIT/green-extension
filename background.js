@@ -34,6 +34,16 @@ function estimateCO2_g(bytes) {
   const energyKWh = gb * profile.energyIntensityKWhPerGB;
   return energyKWh * profile.co2Intensity_gPerKWh;
 }
+// youtube
+const STREAMING_KWH_PER_HOUR = 0.077;
+
+function estimateStreamingCO2_g(seconds) {
+  const hours = seconds / 3600;
+  const profile = getCurrentProfile();
+  const energyKWh = hours * STREAMING_KWH_PER_HOUR;
+  return energyKWh * profile.co2Intensity_gPerKWh;
+}
+
 
 function bytesToGB(bytes) {
   return bytes / (1024 ** 3);
@@ -126,6 +136,30 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
       chrome.storage.local.set({ [key]: updated }, () => {
         console.log('CO2 updated for email send:', currentCountryCode, updated);
+      });
+    });
+  }
+  //  YouTube
+  if (message.type === 'YOUTUBE_WATCH') {
+    const seconds = message.seconds || 0;
+    if (seconds <= 0) return;
+
+    const addedCO2_g = estimateStreamingCO2_g(seconds);
+    const key = getTodayKey();
+
+    chrome.storage.local.get([key], (result) => {
+      const current = result[key] || 0;
+      const updated = current + addedCO2_g;
+
+      chrome.storage.local.set({ [key]: updated }, () => {
+        console.log(
+            'CO2 updated for YouTube in',
+            currentCountryCode,
+            ': +',
+            addedCO2_g.toFixed(3),
+            'g, total =',
+            updated.toFixed(3)
+        );
       });
     });
   }
