@@ -34,8 +34,18 @@
   </style>
 </head>
 <body>
-  <h1>CO₂ emission of your activity</h1>
-  <div class="value" id="co2Value">0</div>
+<h1>CO₂ emission of your activity</h1>
+
+<div>
+  <label for="countrySelect">Country:</label>
+  <select id="countrySelect">
+    <option value="DE">Germany</option>
+    <option value="IS">Iceland</option>
+  </select>
+</div>
+
+<div id="co2Value">0.00</div>
+<div>grams</div>
   <div class="unit">grams</div>
 
   <script src="popup.js"></script>
