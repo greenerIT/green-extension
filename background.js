@@ -43,6 +43,15 @@ function estimateStreamingCO2_g(seconds) {
   const energyKWh = hours * STREAMING_KWH_PER_HOUR;
   return energyKWh * profile.co2Intensity_gPerKWh;
 }
+// Spotify: ~1.5 MB/min → 0.025 MB/sec → 0.000025 GB/sec
+const SPOTIFY_GB_PER_SECOND = 0.000025; // 0.0015 GB/minute
+
+function estimateSpotifyCO2_g(seconds) {
+  const profile = getCurrentProfile();
+  const gb = SPOTIFY_GB_PER_SECOND * seconds;
+  const energyKWh = gb * profile.energyIntensityKWhPerGB;
+  return energyKWh * profile.co2Intensity_gPerKWh;
+}
 
 
 function bytesToGB(bytes) {
@@ -163,6 +172,31 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       });
     });
   }
+  //spotify
+  if (message.type === "SPOTIFY_PLAY") {
+    const seconds = message.seconds || 0;
+    if (seconds <= 0) return;
+
+    const addedCO2_g = estimateSpotifyCO2_g(seconds);
+    const key = getTodayKey();
+
+    chrome.storage.local.get([key], (result) => {
+      const current = result[key] || 0;
+      const updated = current + addedCO2_g;
+
+      chrome.storage.local.set({ [key]: updated }, () => {
+        console.log(
+            "CO2 updated for Spotify in",
+            currentCountryCode,
+            ": +",
+            addedCO2_g.toFixed(4),
+            "g, total =",
+            updated.toFixed(4)
+        );
+      });
+    });
+  }
+
 
   // 2) choose country
   if (message.type === 'SET_COUNTRY') {
