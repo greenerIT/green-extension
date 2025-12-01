@@ -11,6 +11,10 @@ const COUNTRY_PROFILES = {
   }
 };
 
+
+
+const BASE_CO2_PER_EMAIL_GRAMS = 0.3;
+
 // default country
 let currentCountryCode = 'IS';
 
@@ -133,21 +137,26 @@ chrome.downloads.onChanged.addListener(async (delta) => {
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   // 1) for EMAIL_SENT
-  if (message.type === 'EMAIL_SENT') {
-    //FIXME: this measurement is a really rough example , TO BE CHANGEDD
-    const emissionPerEmail = 0.10;
 
-    const key = getTodayKey();
-
-    chrome.storage.local.get([key], (result) => {
-      const current = result[key] || 0;
-      const updated = current + emissionPerEmail;
-
-      chrome.storage.local.set({ [key]: updated }, () => {
-        console.log('CO2 updated for email send:', currentCountryCode, updated);
+    if (message.type === "EMAIL_SENT") {
+    handleEmailSent()
+      .then((updatedData) => {
+        sendResponse({ success: true, data: updatedData });
+      })
+      .catch((err) => {
+        console.error("Error updating CO2 data:", err);
+        sendResponse({ success: false, error: err.toString() });
       });
-    });
+
+    // async cevap
+    return true;
   }
+
+
+
+
+
+  
   //  YouTube
   if (message.type === 'YOUTUBE_WATCH') {
     const seconds = message.seconds || 0;
@@ -216,6 +225,39 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 });
+
+
+async function handleEmailSent() {
+  const key = getTodayKey(); // daily_<country>_<date>
+
+  // Varsayılanlarla oku
+  const result = await chrome.storage.local.get({
+    totalCo2Grams: 0,
+    [key]: 0
+  });
+
+  const newTotalCo2 = result.totalCo2Grams + BASE_CO2_PER_EMAIL_GRAMS;
+  const newDailyCo2 = result[key] + BASE_CO2_PER_EMAIL_GRAMS;
+
+  await chrome.storage.local.set({
+    totalCo2Grams: newTotalCo2,
+    [key]: newDailyCo2
+  });
+
+  // Log kaydı
+  await logEvent({
+    timestamp: new Date().toISOString(),
+    activity: "EMAIL",
+    domain: "mail.google.com",
+    co2_g: Number(BASE_CO2_PER_EMAIL_GRAMS.toFixed(3))
+  });
+
+  return {
+    totalCo2Grams: newTotalCo2,
+    dailyCo2Grams: newDailyCo2
+  };
+}
+
 
 
 chrome.runtime.onInstalled.addListener(() => {
