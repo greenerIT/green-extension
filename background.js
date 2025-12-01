@@ -8,7 +8,13 @@ const COUNTRY_PROFILES = {
     //FIXME: this measurement is a really rough example , TO BE CHANGEDD
     energyIntensityKWhPerGB: 0.15,
     co2Intensity_gPerKWh: 8
+  },
+
+  CZ: { // Czech
+    energyIntensityKWhPerGB: 0.15,
+    co2Intensity_gPerKWh: 470
   }
+
 };
 
 
@@ -230,7 +236,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 async function handleEmailSent() {
   const key = getTodayKey(); // daily_<country>_<date>
 
-  // Varsayılanlarla oku
+
   const result = await chrome.storage.local.get({
     totalCo2Grams: 0,
     [key]: 0
@@ -244,7 +250,7 @@ async function handleEmailSent() {
     [key]: newDailyCo2
   });
 
-  // Log kaydı
+
   await logEvent({
     timestamp: new Date().toISOString(),
     activity: "EMAIL",
