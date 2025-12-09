@@ -1,42 +1,82 @@
-// countries: Germany (DE) и Iceland (IS)
-const COUNTRY_PROFILES = {
-  DE: { // Germany
-    energyIntensityKWhPerGB: 0.15,
-    co2Intensity_gPerKWh: 400
-  },
-  IS: { // Iceland
-    //FIXME: this measurement is a really rough example , TO BE CHANGEDD
-    energyIntensityKWhPerGB: 0.15,
-    co2Intensity_gPerKWh: 8
-  },
 
-  CZ: { // Czech
-    energyIntensityKWhPerGB: 0.15,
-    co2Intensity_gPerKWh: 470
+const API_KEY = "dRXqUx1JTzl28nnSaBZ7";
+const BASE_URL = "https://api.electricitymaps.com/v3"; //  Electricity maps forecast api
+
+
+async function fetchForecastIntensity(zone) {
+  try {
+    const url = `${BASE_URL}/carbon-intensity/forecast?zone=${zone}`;
+
+    const response = await fetch(url, {
+      headers: {
+        "auth-token": API_KEY
+      }
+    });
+
+    if (!response.ok) {
+      console.warn("Forecast API error:", await response.text());
+      return null;
+    }
+
+    const data = await response.json();
+    return data?.forecast?.[0]?.carbonIntensity || null;
+
+  } catch (err) {
+    console.error("Forecast fetch error:", err);
+    return null;
   }
+}
 
+
+const COUNTRY_PROFILES = {
+  DE: { 
+    energyIntensityKWhPerGB: 0.15,
+  },
+  IS: { 
+    energyIntensityKWhPerGB: 0.10,
+  },
+  CZ: { 
+    energyIntensityKWhPerGB: 0.15,
+  }
 };
-
 
 
 const BASE_CO2_PER_EMAIL_GRAMS = 0.3;
 
-// default country
 let currentCountryCode = 'IS';
 
 function getCurrentProfile() {
   return COUNTRY_PROFILES[currentCountryCode] || COUNTRY_PROFILES.DE;
 }
 
-// when start script use prevously chosen country
-chrome.storage.sync.get(['countryCode'], (res) => {
+
+
+chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  if (msg.type === "GET_INTENSITY") {
+    fetchForecastIntensity(msg.countryCode).then((intensity) => {
+      sendResponse(intensity);
+    });
+    return true; 
+  }
+});
+
+
+//forecast for downloading
+
+chrome.storage.sync.get(['countryCode'], async (res) => {
   if (res.countryCode && COUNTRY_PROFILES[res.countryCode]) {
     currentCountryCode = res.countryCode;
     console.log('Using country profile:', currentCountryCode);
   } else {
     console.log('Using default country profile: DE');
+    currentCountryCode = "DE";
   }
+
+  const forecast = await fetchForecastIntensity(currentCountryCode);
+  
 });
+
+
 
 function estimateCO2_g(bytes) {
   const profile = getCurrentProfile();
@@ -44,7 +84,7 @@ function estimateCO2_g(bytes) {
   const energyKWh = gb * profile.energyIntensityKWhPerGB;
   return energyKWh * profile.co2Intensity_gPerKWh;
 }
-// youtube
+
 const STREAMING_KWH_PER_HOUR = 0.077;
 
 function estimateStreamingCO2_g(seconds) {
@@ -53,8 +93,8 @@ function estimateStreamingCO2_g(seconds) {
   const energyKWh = hours * STREAMING_KWH_PER_HOUR;
   return energyKWh * profile.co2Intensity_gPerKWh;
 }
-// Spotify: ~1.5 MB/min → 0.025 MB/sec → 0.000025 GB/sec
-const SPOTIFY_GB_PER_SECOND = 0.000025; // 0.0015 GB/minute
+
+const SPOTIFY_GB_PER_SECOND = 0.000025;
 
 function estimateSpotifyCO2_g(seconds) {
   const profile = getCurrentProfile();
@@ -63,20 +103,20 @@ function estimateSpotifyCO2_g(seconds) {
   return energyKWh * profile.co2Intensity_gPerKWh;
 }
 
-
 function bytesToGB(bytes) {
   return bytes / (1024 ** 3);
 }
+
 function getTodayKey() {
   const today = new Date().toISOString().slice(0, 10);
   return `daily_${currentCountryCode}_${today}`;
 }
 
+
 async function logEvent(entry) {
   const { events = [] } = await chrome.storage.local.get("events");
   events.push(entry);
   await chrome.storage.local.set({ events });
-  console.log("[Green Extension:]", entry);
 }
 
 function getDomain(url) {
@@ -87,7 +127,7 @@ function getDomain(url) {
   }
 }
 
-// for tracking downloads
+
 const downloadMap = new Map();
 
 chrome.downloads.onCreated.addListener((item) => {
@@ -104,7 +144,6 @@ chrome.downloads.onChanged.addListener(async (delta) => {
 
     const url = downloadMap.get(delta.id)?.url || item.finalUrl || item.url || "";
     const domain = getDomain(url);
-
 
     if (!domain.includes("google")) return;
 
@@ -124,107 +163,74 @@ chrome.downloads.onChanged.addListener(async (delta) => {
 
     await logEvent(log);
 
-  //TODO: Decide -> total or per activity
-    // total per *current country* and day
-    const key = getTodayKey(); // daily_<country>_<date>
+    const key = getTodayKey();
     const { [key]: current = 0 } = await chrome.storage.local.get(key);
     await chrome.storage.local.set({ [key]: current + log.co2_g });
 
-
-  //FIXME: Popup is not automatically opening up 
     await chrome.action.openPopup();
 
-  } catch (err) {
-    console.error("Error processing download:", err);
-  } finally {
+  } catch (err) {} 
+  finally {
     downloadMap.delete(delta.id);
   }
 });
 
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  // 1) for EMAIL_SENT
-
-    if (message.type === "EMAIL_SENT") {
+  
+  if (message.type === "EMAIL_SENT") {
     handleEmailSent()
-      .then((updatedData) => {
-        sendResponse({ success: true, data: updatedData });
-      })
-      .catch((err) => {
-        console.error("Error updating CO2 data:", err);
-        sendResponse({ success: false, error: err.toString() });
-      });
-
-    // async cevap
+      .then((updatedData) => sendResponse({ success: true, data: updatedData }))
+      .catch((err) => sendResponse({ success: false, error: err.toString() }));
     return true;
   }
 
-
-
-
-
-  
-  //  YouTube
+  // YouTube
   if (message.type === 'YOUTUBE_WATCH') {
     const seconds = message.seconds || 0;
     if (seconds <= 0) return;
 
-    const addedCO2_g = estimateStreamingCO2_g(seconds);
+    const added = estimateStreamingCO2_g(seconds);
     const key = getTodayKey();
 
     chrome.storage.local.get([key], (result) => {
-      const current = result[key] || 0;
-      const updated = current + addedCO2_g;
-
-      chrome.storage.local.set({ [key]: updated }, () => {
-        console.log(
-            'CO2 updated for YouTube in',
-            currentCountryCode,
-            ': +',
-            addedCO2_g.toFixed(3),
-            'g, total =',
-            updated.toFixed(3)
-        );
-      });
+      const updated = (result[key] || 0) + added;
+      chrome.storage.local.set({ [key]: updated });
     });
   }
-  //spotify
+
+  // Spotify
   if (message.type === "SPOTIFY_PLAY") {
     const seconds = message.seconds || 0;
     if (seconds <= 0) return;
 
-    const addedCO2_g = estimateSpotifyCO2_g(seconds);
+    const added = estimateSpotifyCO2_g(seconds);
     const key = getTodayKey();
 
     chrome.storage.local.get([key], (result) => {
-      const current = result[key] || 0;
-      const updated = current + addedCO2_g;
-
-      chrome.storage.local.set({ [key]: updated }, () => {
-        console.log(
-            "CO2 updated for Spotify in",
-            currentCountryCode,
-            ": +",
-            addedCO2_g.toFixed(4),
-            "g, total =",
-            updated.toFixed(4)
-        );
-      });
+      const updated = (result[key] || 0) + added;
+      chrome.storage.local.set({ [key]: updated });
     });
   }
 
 
-  // 2) choose country
   if (message.type === 'SET_COUNTRY') {
     const code = message.countryCode;
 
     if (COUNTRY_PROFILES[code]) {
       currentCountryCode = code;
-      chrome.storage.sync.set({ countryCode: code }, () => {
-        console.log('Country changed to:', code);
-        sendResponse({ success: true });
+      chrome.storage.sync.set({ countryCode: code });
+
+      fetchForecastIntensity(code).then((intensity) => {
+        if (intensity !== null) {
+          COUNTRY_PROFILES[code].co2Intensity_gPerKWh = intensity;
+          console.log("Forecast updated for", code, ":", intensity);
+        }
       });
+
+      sendResponse({ success: true });
+
     } else {
-      console.warn('Unknown country code:', code);
       sendResponse({ success: false, error: 'Unknown country code' });
     }
 
@@ -232,42 +238,37 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 });
 
-
+//email
 async function handleEmailSent() {
-  const key = getTodayKey(); // daily_<country>_<date>
-
+  const key = getTodayKey();
 
   const result = await chrome.storage.local.get({
     totalCo2Grams: 0,
     [key]: 0
   });
 
-  const newTotalCo2 = result.totalCo2Grams + BASE_CO2_PER_EMAIL_GRAMS;
-  const newDailyCo2 = result[key] + BASE_CO2_PER_EMAIL_GRAMS;
+  const newTotal = result.totalCo2Grams + BASE_CO2_PER_EMAIL_GRAMS;
+  const newDaily = result[key] + BASE_CO2_PER_EMAIL_GRAMS;
 
   await chrome.storage.local.set({
-    totalCo2Grams: newTotalCo2,
-    [key]: newDailyCo2
+    totalCo2Grams: newTotal,
+    [key]: newDaily
   });
-
 
   await logEvent({
     timestamp: new Date().toISOString(),
     activity: "EMAIL",
     domain: "mail.google.com",
-    co2_g: Number(BASE_CO2_PER_EMAIL_GRAMS.toFixed(3))
+    co2_g: BASE_CO2_PER_EMAIL_GRAMS
   });
 
   return {
-    totalCo2Grams: newTotalCo2,
-    dailyCo2Grams: newDailyCo2
+    totalCo2Grams: newTotal,
+    dailyCo2Grams: newDaily
   };
 }
-
-
 
 chrome.runtime.onInstalled.addListener(() => {
   chrome.storage.local.set({ events: [] });
   console.log("Green Extension installed and initialized.");
 });
-
