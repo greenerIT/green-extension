@@ -24,7 +24,7 @@ const GREEN_SUGGESTIONS = {
   ],
 
   gmail: [
-    "Avoid large attachments, share cloud links instead",
+    "Avoid large attachments, compress them or share cloud links instead",
     "Unsubscribe from unnecessary newsletters",
     "Delete spam and old emails regularly",
     "Reduce CC usage when sending emails",
@@ -91,7 +91,7 @@ function updateCarbonStatus(intensity) {
     badge.textContent = `Low Carbon`;
     badge.className = "carbon-badge low";
   } else if (intensity < 350) {
-    badge.textContent = `Moderate`;
+    badge.textContent = `Moderate Carbon`;
     badge.className = "carbon-badge medium";
   } else {
     badge.textContent = `High Carbon`;
