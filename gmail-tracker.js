@@ -1,11 +1,10 @@
 const observedButtons = new WeakSet();
 
 function attachSendButtonListeners() {
-
   const possibleSelectors = [
-    'div[role="button"][data-tooltip*="Send"]',   
-    'div[role="button"][data-tooltip*="Gönder"]', 
-    'div[role="button"][data-tooltip*="Senden"]'  
+    'div[role="button"][data-tooltip*="Send"]',
+    'div[role="button"][data-tooltip*="Gönder"]',
+    'div[role="button"][data-tooltip*="Senden"]',
   ];
 
   const buttons = document.querySelectorAll(possibleSelectors.join(","));
@@ -15,9 +14,7 @@ function attachSendButtonListeners() {
       observedButtons.add(btn);
 
       btn.addEventListener("click", () => {
-
         chrome.runtime.sendMessage({ type: "EMAIL_SENT" }, (response) => {
-
           if (response && response.success) {
             console.log("Email CO2 updated:", response.data);
           } else {
@@ -29,7 +26,6 @@ function attachSendButtonListeners() {
   });
 }
 
-
 function observeDomForSendButtons() {
   const observer = new MutationObserver(() => {
     attachSendButtonListeners();
@@ -37,13 +33,11 @@ function observeDomForSendButtons() {
 
   observer.observe(document.body, {
     childList: true,
-    subtree: true
+    subtree: true,
   });
-
 
   attachSendButtonListeners();
 }
-
 
 if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", observeDomForSendButtons);

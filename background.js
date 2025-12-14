@@ -1,7 +1,6 @@
-
 const API_KEY = "dRXqUx1JTzl28nnSaBZ7";
 const BASE_URL = "https://api.electricitymaps.com/v3"; //  Electricity maps forecast api
-
+// CO2_total = CO2_device(current country) + CO2_network(current country) + CO2_datacenter (Frankfurt/Finland/Ireland)
 
 async function fetchForecastIntensity(zone) {
   try {
@@ -9,8 +8,8 @@ async function fetchForecastIntensity(zone) {
 
     const response = await fetch(url, {
       headers: {
-        "auth-token": API_KEY
-      }
+        "auth-token": API_KEY,
+      },
     });
 
     if (!response.ok) {
@@ -20,63 +19,54 @@ async function fetchForecastIntensity(zone) {
 
     const data = await response.json();
     return data?.forecast?.[0]?.carbonIntensity || null;
-
   } catch (err) {
     console.error("Forecast fetch error:", err);
     return null;
   }
 }
 
-
 const COUNTRY_PROFILES = {
-  DE: { 
+  DE: {
     energyIntensityKWhPerGB: 0.15,
   },
-  IS: { 
-    energyIntensityKWhPerGB: 0.10,
+  IS: {
+    energyIntensityKWhPerGB: 0.1,
   },
-  CZ: { 
+  CZ: {
     energyIntensityKWhPerGB: 0.15,
-  }
+  },
 };
-
 
 const BASE_CO2_PER_EMAIL_GRAMS = 0.3;
 
-let currentCountryCode = 'IS';
+let currentCountryCode = "IS";
 
 function getCurrentProfile() {
   return COUNTRY_PROFILES[currentCountryCode] || COUNTRY_PROFILES.DE;
 }
-
-
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.type === "GET_INTENSITY") {
     fetchForecastIntensity(msg.countryCode).then((intensity) => {
       sendResponse(intensity);
     });
-    return true; 
+    return true;
   }
 });
 
-
 //forecast for downloading
 
-chrome.storage.sync.get(['countryCode'], async (res) => {
+chrome.storage.sync.get(["countryCode"], async (res) => {
   if (res.countryCode && COUNTRY_PROFILES[res.countryCode]) {
     currentCountryCode = res.countryCode;
-    console.log('Using country profile:', currentCountryCode);
+    console.log("Using country profile:", currentCountryCode);
   } else {
-    console.log('Using default country profile: DE');
+    console.log("Using default country profile: DE");
     currentCountryCode = "DE";
   }
 
   const forecast = await fetchForecastIntensity(currentCountryCode);
-  
 });
-
-
 
 function estimateCO2_g(bytes) {
   const profile = getCurrentProfile();
@@ -104,14 +94,13 @@ function estimateSpotifyCO2_g(seconds) {
 }
 
 function bytesToGB(bytes) {
-  return bytes / (1024 ** 3);
+  return bytes / 1024 ** 3;
 }
 
 function getTodayKey() {
   const today = new Date().toISOString().slice(0, 10);
   return `daily_${currentCountryCode}_${today}`;
 }
-
 
 async function logEvent(entry) {
   const { events = [] } = await chrome.storage.local.get("events");
@@ -127,7 +116,6 @@ function getDomain(url) {
   }
 }
 
-
 const downloadMap = new Map();
 
 chrome.downloads.onCreated.addListener((item) => {
@@ -142,7 +130,15 @@ chrome.downloads.onChanged.addListener(async (delta) => {
     const [item] = await chrome.downloads.search({ id: delta.id });
     if (!item) return;
 
-    const url = downloadMap.get(delta.id)?.url || item.finalUrl || item.url || "";
+    await chrome.storage.local.set({
+      lastActivity: {
+        type: "download",
+        timestamp: Date.now(),
+      },
+    });
+
+    const url =
+      downloadMap.get(delta.id)?.url || item.finalUrl || item.url || "";
     const domain = getDomain(url);
 
     if (!domain.includes("google")) return;
@@ -158,7 +154,7 @@ chrome.downloads.onChanged.addListener(async (delta) => {
       domain,
       filename: item.filename,
       bytes: totalBytes,
-      co2_g: Number(co2_g.toFixed(3))
+      co2_g: Number(co2_g.toFixed(3)),
     };
 
     await logEvent(log);
@@ -168,16 +164,13 @@ chrome.downloads.onChanged.addListener(async (delta) => {
     await chrome.storage.local.set({ [key]: current + log.co2_g });
 
     await chrome.action.openPopup();
-
-  } catch (err) {} 
-  finally {
+  } catch (err) {
+  } finally {
     downloadMap.delete(delta.id);
   }
 });
 
-
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  
   if (message.type === "EMAIL_SENT") {
     handleEmailSent()
       .then((updatedData) => sendResponse({ success: true, data: updatedData }))
@@ -186,7 +179,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   // YouTube
-  if (message.type === 'YOUTUBE_WATCH') {
+  if (message.type === "YOUTUBE_WATCH") {
+    chrome.storage.local.set({
+      lastActivity: {
+        type: "youtube",
+        timestamp: Date.now(),
+      },
+    });
+
     const seconds = message.seconds || 0;
     if (seconds <= 0) return;
 
@@ -201,6 +201,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   // Spotify
   if (message.type === "SPOTIFY_PLAY") {
+    chrome.storage.local.set({
+      lastActivity: {
+        type: "spotify",
+        timestamp: Date.now(),
+      },
+    });
+
     const seconds = message.seconds || 0;
     if (seconds <= 0) return;
 
@@ -213,8 +220,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     });
   }
 
-
-  if (message.type === 'SET_COUNTRY') {
+  if (message.type === "SET_COUNTRY") {
     const code = message.countryCode;
 
     if (COUNTRY_PROFILES[code]) {
@@ -229,9 +235,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       });
 
       sendResponse({ success: true });
-
     } else {
-      sendResponse({ success: false, error: 'Unknown country code' });
+      sendResponse({ success: false, error: "Unknown country code" });
     }
 
     return true;
@@ -240,11 +245,20 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 //email
 async function handleEmailSent() {
+
+    await chrome.storage.local.set({
+    lastActivity: {
+      type: "gmail",
+      timestamp: Date.now(),
+    },
+  });
+
+  
   const key = getTodayKey();
 
   const result = await chrome.storage.local.get({
     totalCo2Grams: 0,
-    [key]: 0
+    [key]: 0,
   });
 
   const newTotal = result.totalCo2Grams + BASE_CO2_PER_EMAIL_GRAMS;
@@ -252,19 +266,19 @@ async function handleEmailSent() {
 
   await chrome.storage.local.set({
     totalCo2Grams: newTotal,
-    [key]: newDaily
+    [key]: newDaily,
   });
 
   await logEvent({
     timestamp: new Date().toISOString(),
     activity: "EMAIL",
     domain: "mail.google.com",
-    co2_g: BASE_CO2_PER_EMAIL_GRAMS
+    co2_g: BASE_CO2_PER_EMAIL_GRAMS,
   });
 
   return {
     totalCo2Grams: newTotal,
-    dailyCo2Grams: newDaily
+    dailyCo2Grams: newDaily,
   };
 }
 
