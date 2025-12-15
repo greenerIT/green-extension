@@ -148,13 +148,13 @@ function updateCarbonStatus(intensity) {
 
   // (${intensity} g/kWh)
   if (intensity < 150) {
-    badge.textContent = `Low Carbon`;
+    badge.textContent = `Grid: Low`;
     badge.className = "carbon-badge low";
   } else if (intensity < 350) {
-    badge.textContent = `Moderate Carbon`;
+    badge.textContent = `Grid: Medium`;
     badge.className = "carbon-badge medium";
   } else {
-    badge.textContent = `High Carbon`;
+    badge.textContent = `Grid: High`;
     badge.className = "carbon-badge high";
   }
 }
