@@ -94,7 +94,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const countrySelect = document.getElementById("countrySelect");
 
   chrome.storage.sync.get(["countryCode"], async (res) => {
-    const code = res.countryCode || "DE";
+    const code = res.countryCode || "IS";
     countrySelect.value = code;
 
     loadTodayCO2(code);
