@@ -25,15 +25,22 @@ async function fetchForecastIntensity(zone) {
   }
 }
 
+async function fetchDatacenterIntensity(zone) {
+  return await fetchForecastIntensity(zone);
+}
+
 const COUNTRY_PROFILES = {
   DE: {
     energyIntensityKWhPerGB: 0.15,
-  },
-  IS: {
-    energyIntensityKWhPerGB: 0.1,
+    datacenterZone: "DE",
   },
   CZ: {
     energyIntensityKWhPerGB: 0.15,
+    datacenterZone: "DE",
+  },
+  IS: {
+    energyIntensityKWhPerGB: 0.1,
+    datacenterZone: "FI",
   },
 };
 
@@ -72,7 +79,16 @@ function estimateCO2_g(bytes) {
   const profile = getCurrentProfile();
   const gb = bytesToGB(bytes);
   const energyKWh = gb * profile.energyIntensityKWhPerGB;
-  return energyKWh * profile.co2Intensity_gPerKWh;
+  const deviceCO2 = energyKWh * profile.co2Intensity_gPerKWh;
+
+  const networkCO2 = energyKWh * 0.2 * profile.co2Intensity_gPerKWh;
+
+  const datacenterCO2 =
+    energyKWh *
+    0.2 *
+    (profile.datacenterCo2Intensity_gPerKWh || profile.co2Intensity_gPerKWh);
+
+  return deviceCO2 + networkCO2 + datacenterCO2;
 }
 
 const STREAMING_KWH_PER_HOUR = 0.077;
@@ -81,8 +97,22 @@ function estimateStreamingCO2_g(seconds) {
   const hours = seconds / 3600;
   const profile = getCurrentProfile();
   const energyKWh = hours * STREAMING_KWH_PER_HOUR;
-  return energyKWh * profile.co2Intensity_gPerKWh;
+
+  const deviceCO2 =
+    energyKWh * profile.co2Intensity_gPerKWh;
+
+  const networkCO2 =
+    energyKWh * 0.2 * profile.co2Intensity_gPerKWh;
+
+  const datacenterCO2 =
+    energyKWh *
+    0.2 *
+    (profile.datacenterCo2Intensity_gPerKWh ||
+     profile.co2Intensity_gPerKWh);
+
+  return deviceCO2 + networkCO2 + datacenterCO2;
 }
+
 
 const SPOTIFY_GB_PER_SECOND = 0.000025;
 
@@ -90,8 +120,22 @@ function estimateSpotifyCO2_g(seconds) {
   const profile = getCurrentProfile();
   const gb = SPOTIFY_GB_PER_SECOND * seconds;
   const energyKWh = gb * profile.energyIntensityKWhPerGB;
-  return energyKWh * profile.co2Intensity_gPerKWh;
+
+  const deviceCO2 =
+    energyKWh * profile.co2Intensity_gPerKWh;
+
+  const networkCO2 =
+    energyKWh * 0.2 * profile.co2Intensity_gPerKWh;
+
+  const datacenterCO2 =
+    energyKWh *
+    0.2 *
+    (profile.datacenterCo2Intensity_gPerKWh ||
+     profile.co2Intensity_gPerKWh);
+
+  return deviceCO2 + networkCO2 + datacenterCO2;
 }
+
 
 function bytesToGB(bytes) {
   return bytes / 1024 ** 3;
@@ -227,10 +271,28 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       currentCountryCode = code;
       chrome.storage.sync.set({ countryCode: code });
 
-      fetchForecastIntensity(code).then((intensity) => {
+      // device + datacenter + network
+      fetchForecastIntensity(code).then(async (intensity) => {
         if (intensity !== null) {
           COUNTRY_PROFILES[code].co2Intensity_gPerKWh = intensity;
-          console.log("Forecast updated for", code, ":", intensity);
+          console.log("Grid intensity updated for", code, ":", intensity);
+        }
+
+
+        const dcZone = COUNTRY_PROFILES[code].datacenterZone;
+
+        if (dcZone) {
+          const dcIntensity = await fetchForecastIntensity(dcZone);
+
+          if (dcIntensity !== null) {
+            COUNTRY_PROFILES[code].datacenterCo2Intensity_gPerKWh = dcIntensity;
+            console.log(
+              "Datacenter intensity updated for",
+              dcZone,
+              ":",
+              dcIntensity
+            );
+          }
         }
       });
 
@@ -245,15 +307,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 //email
 async function handleEmailSent() {
-
-    await chrome.storage.local.set({
+  await chrome.storage.local.set({
     lastActivity: {
       type: "gmail",
       timestamp: Date.now(),
     },
   });
 
-  
   const key = getTodayKey();
 
   const result = await chrome.storage.local.get({
