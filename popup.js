@@ -107,7 +107,8 @@ document.addEventListener("DOMContentLoaded", () => {
     } else {
       countrySelect.value = "";
       document.getElementById("co2Value").textContent = "0.00";
-      document.getElementById("carbonStatus").textContent = "Select country";
+      const badge = document.getElementById("carbonStatus");
+      badge.style.display = "none";
     }
   });
 
@@ -115,6 +116,9 @@ document.addEventListener("DOMContentLoaded", () => {
     const code = countrySelect.value;
 
     if (!code) return;
+
+    const badge = document.getElementById("carbonStatus");
+    badge.style.display = "flex";
 
     chrome.storage.sync.set({ countryCode: code });
 
