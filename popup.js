@@ -94,20 +94,28 @@ document.addEventListener("DOMContentLoaded", () => {
   const countrySelect = document.getElementById("countrySelect");
 
   chrome.storage.sync.get(["countryCode"], async (res) => {
-    const code = res.countryCode || "IS";
-    countrySelect.value = code;
+    if (res.countryCode) {
+      countrySelect.value = res.countryCode;
 
-    loadTodayCO2(code);
+      loadTodayCO2(res.countryCode);
 
-    const intensity = await chrome.runtime.sendMessage({
-      type: "GET_INTENSITY",
-      countryCode: code,
-    });
-    updateCarbonStatus(intensity);
+      const intensity = await chrome.runtime.sendMessage({
+        type: "GET_INTENSITY",
+        countryCode: res.countryCode,
+      });
+      updateCarbonStatus(intensity);
+    } else {
+      countrySelect.value = "";
+      document.getElementById("co2Value").textContent = "0.00";
+      document.getElementById("carbonStatus").textContent = "Select country";
+    }
   });
 
   countrySelect.addEventListener("change", async () => {
     const code = countrySelect.value;
+
+    if (!code) return;
+
     chrome.storage.sync.set({ countryCode: code });
 
     chrome.runtime.sendMessage(
