@@ -93,6 +93,10 @@ async function loadTodayCO2(countryCode) {
 document.addEventListener("DOMContentLoaded", () => {
   const countrySelect = document.getElementById("countrySelect");
 
+   chrome.storage.local.get(["emissionsByActivity"], (res) => {
+    renderEmissionAccordion(res.emissionsByActivity || {});
+  });
+
   chrome.storage.sync.get(["countryCode"], async (res) => {
     if (res.countryCode) {
       countrySelect.value = res.countryCode;
@@ -208,3 +212,39 @@ function renderCO2Equivalence(totalGrams) {
 
   el.textContent = "";
 }
+
+function renderEmissionAccordion(emissionsByActivity) {
+  const container = document.getElementById("emissionAccordion");
+  if (!container) return;
+
+  const entries = Object.entries(emissionsByActivity)
+    .filter(([_, value]) => value > 0);
+
+  const total = entries.reduce((sum, [, val]) => sum + val, 0);
+
+  if (total === 0) {
+    container.innerHTML =
+      "<p style='opacity:.6'>No categorization data yet</p>";
+    return;
+  }
+
+  container.innerHTML = entries
+    .map(([activity, value]) => {
+      const percentage = ((value / total) * 100).toFixed(1);
+
+      return `
+        <details class="accordion-item">
+          <summary>
+            ${activity.toUpperCase()}
+            <span>${percentage}%</span>
+          </summary>
+          <div class="accordion-content">
+            ${value.toFixed(2)} g CO₂
+          </div>
+        </details>
+      `;
+    })
+    .join("");
+}
+
+

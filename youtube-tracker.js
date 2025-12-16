@@ -10,7 +10,7 @@ setInterval(() => {
     }
 
 
-    if (watchedBufferSeconds >= 30) {
+    if (watchedBufferSeconds >= 10) {
         chrome.runtime.sendMessage({
             type: 'YOUTUBE_WATCH',
             seconds: watchedBufferSeconds

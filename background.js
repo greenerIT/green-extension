@@ -61,6 +61,41 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   }
 });
 
+function getTodayDateString() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+
+async function addEmissionByActivity(type, amount) {
+  const {
+    emissionsByActivity = {},
+    emissionsByActivityDate
+  } = await chrome.storage.local.get([
+    "emissionsByActivity",
+    "emissionsByActivityDate"
+  ]);
+
+  const today = getTodayDateString();
+
+  // gün değiştiyse reset
+  if (emissionsByActivityDate !== today) {
+    emissionsByActivity.download = 0;
+    emissionsByActivity.youtube = 0;
+    emissionsByActivity.spotify = 0;
+    emissionsByActivity.gmail = 0;
+  }
+
+  emissionsByActivity[type] =
+    (emissionsByActivity[type] || 0) + amount;
+
+  await chrome.storage.local.set({
+    emissionsByActivity,
+    emissionsByActivityDate: today,
+  });
+}
+
+
+
 //forecast for downloading
 
 chrome.storage.sync.get(["countryCode"], async (res) => {
@@ -146,6 +181,7 @@ function getTodayKey() {
   return `daily_${currentCountryCode}_${today}`;
 }
 
+
 async function logEvent(entry) {
   const { events = [] } = await chrome.storage.local.get("events");
   events.push(entry);
@@ -203,6 +239,8 @@ chrome.downloads.onChanged.addListener(async (delta) => {
 
     await logEvent(log);
 
+    await addEmissionByActivity("download", log.co2_g);
+
     const key = getTodayKey();
     const { [key]: current = 0 } = await chrome.storage.local.get(key);
     await chrome.storage.local.set({ [key]: current + log.co2_g });
@@ -235,6 +273,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (seconds <= 0) return;
 
     const added = estimateStreamingCO2_g(seconds);
+    addEmissionByActivity("youtube", added);
     const key = getTodayKey();
 
     chrome.storage.local.get([key], (result) => {
@@ -256,6 +295,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (seconds <= 0) return;
 
     const added = estimateSpotifyCO2_g(seconds);
+    addEmissionByActivity("spotify", added);
+
     const key = getTodayKey();
 
     chrome.storage.local.get([key], (result) => {
@@ -335,6 +376,9 @@ async function handleEmailSent() {
     domain: "mail.google.com",
     co2_g: BASE_CO2_PER_EMAIL_GRAMS,
   });
+
+  await addEmissionByActivity("gmail", BASE_CO2_PER_EMAIL_GRAMS);
+
 
   return {
     totalCo2Grams: newTotal,
