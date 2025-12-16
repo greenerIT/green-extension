@@ -82,29 +82,73 @@ GREEN-EXTENSION/
 ├── README.md  
 ```
 
-
-
-
 ## Implementation Basics
 
-- User interactions are detected by activity-specific content scripts
-- Data is sent to background.js using the Chrome Messaging API
-- Carbon emission estimation currently uses:
-  - Mocked CO₂ intensity values
-  - Country-based energy intensity assumptions
-- The architecture supports future integration of:
-  - Real-time carbon intensity data
-  - Network and data center emissions
+### Data Collection and Processing
 
+- User interactions are detected by activity-specific content scripts.
+- Collected data is sent to `background.js` using the Chrome Messaging API.
+- Carbon emission estimation uses the **Electricity Maps Forecast API** to fetch CO₂ intensity data, combined with country-based energy intensity assumptions per GB. API endpoint used: (`/v3/carbon-intensity/forecast`).
+- The user selects their country when first using the extension, and this selection persists until it is changed manually.
+- Daily carbon emissions are accumulated and displayed as a daily total, which resets at the start of the next day.
 
+### Visualization and Categorization
+
+- Carbon emission estimates are categorized by activity.
+- Activity-based categorization is displayed only after relevant activities occur; otherwise, the message *"No categorization data is available yet"* is shown.
+- The current electricity grid status is displayed in the popup as a badge, indicating how carbon-intensive the electricity grid is at that moment. This visual feedback aims to increase user awareness of how clean or carbon-intensive the electricity supply is in real time.
+- The architecture supports future integration of more granular and real-time carbon intensity data.
 
 ## Limitations
 
-- Streaming activities (e.g., YouTube, Spotify):
+- Carbon emission of streaming activities like YouTube and Spotify:
   - Highly variable
   - Depend on device hardware, resolution, and network type  
-  Emission values should be considered approximations
+  
+  Emission values should be considered approximations.
 
+
+## How to Install and Use the Extension
+
+### Installation 
+
+1. Clone or download the project repository to your local machine.
+2. Open **Google Chrome** and navigate to:
+
+```html
+chrome://extensions
+```
+
+3. Enable **Developer mode** using the toggle in the top-right corner.
+4. Click **Load unpacked**.
+5. Select the root folder of the project
+6. The Green Extension icon will appear in the Chrome toolbar.
+
+### How to Use 
+
+1. Open a supported website such as:
+- Google Drive
+- Gmail  
+- YouTube  
+
+
+2. Interact with the platform normally:
+- Download a file 
+- Send an email
+- Watch a Youtube video  
+  
+
+3. The content scripts automatically detect activity-related interactions.
+
+4. Click on the **Green Extension icon** in the Chrome toolbar to open the popup.
+
+5. The popup displays:
+- Estimated carbon emissions in daily total
+- Country selection     
+- Greener usage suggestions  
+- Activity categories  
+
+---
 
 
 ## Sustainability Disclaimer

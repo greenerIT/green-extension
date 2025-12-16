@@ -224,7 +224,7 @@ function renderEmissionAccordion(emissionsByActivity) {
 
   if (total === 0) {
     container.innerHTML =
-      "<p style='opacity:.6'>No categorization data yet</p>";
+      "<p style='opacity:.6'>No categorization data available yet</p>";
     return;
   }
 
