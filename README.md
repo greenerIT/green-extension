@@ -148,6 +148,13 @@ chrome://extensions
 - Greener usage suggestions  
 - Activity categories  
 
+
+### ⚠️ Important Notice
+If the extension fails to calculate or display data correctly, please remove the extension from Chrome and reinstall it.
+
+For the most reliable and optimal results, we recommend following this usage order: 
+https://drive.google.com → https://mail.google.com → https://www.youtube.com → https://www.spotify.com
+
 ---
 
 
