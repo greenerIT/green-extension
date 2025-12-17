@@ -28,7 +28,7 @@
       .separator {
         width: 80%;
         height: 2px;
-        background-color: rgba(255, 255, 255, 0.4);
+        background-color: rgba(255, 255, 255, 0.6);
         margin-bottom: 15px;
         border-radius: 2px;
       }
@@ -38,7 +38,7 @@
         height: 160px;
         border-radius: 50%;
         border: 2.5px solid rgba(255, 255, 255, 0.6);
-        margin-top: 20px;
+        margin-top: 10px;
         display: flex;
         justify-content: center;
         align-items: center;
@@ -55,14 +55,33 @@
         );
       }
 
-      .carbon-badge {
-        margin-top: 20px;
-        padding: 4px 8px;
-        font-size: 12px;
+      .value-unit {
+        display: flex;
+        flex-direction: row;
+        align-items: baseline;
+        gap: 6px;
+      }
+
+      .value {
+        font-size: 34px;
         font-weight: 600;
-        border-radius: 20px;
+        color: #a7d6a2;
+      }
+
+      .unit {
+        font-size: 17px;
+        opacity: 0.65;
+        color: #a7d6a2;
+      }
+
+      .carbon-badge {
+        padding: 6px 12px;
+        font-size: 14px;
+        font-weight: 600;
+        border-radius: 8px;
         border: 1px solid rgba(167, 214, 162, 0.6);
         color: #a7d6a2;
+        opacity: 0.90;
         background-color: rgba(167, 214, 162, 0.12);
         display: flex;
         align-items: center;
@@ -87,30 +106,9 @@
         background-color: rgba(167, 214, 162, 0.12);
       }
 
-      .value-unit {
-        display: flex;
-        flex-direction: row;
-        align-items: baseline;
-        gap: 6px;
-      }
-
-      .value {
-        font-size: 34px;
-        font-weight: 600;
-        color: #a7d6a2;
-      }
-
-      .unit {
-        font-size: 17px;
-        opacity: 0.65;
-        color: #a7d6a2;
-      }
-
       .country-container {
-        margin-top: 35px;
         display: flex;
         flex-direction: column;
-        align-items: center;
         gap: 6px;
       }
 
@@ -136,33 +134,39 @@
         background-color: #1a332a;
       }
 
+      .context-row {
+        width: 100%;
+       display: flex;
+       justify-content: center;
+       margin-top: 10px;
+      }
+
+      .country-row {
+       display: flex;
+        align-items: center;
+       gap: 10px;
+      }
+
       .green-tip {
         margin-top: 16px;
         padding: 12px 14px;
         width: 90%;
         border-radius: 14px;
-
         display: none;
         align-items: center;
         gap: 10px;
-
         font-size: 13px;
         line-height: 1.4;
         font-weight: 500;
-
         color: #cff4d2;
-
         background: linear-gradient(
           135deg,
-          rgba(167, 214, 162, 0.18),
-          rgba(167, 214, 162, 0.08)
+          rgba(255, 255, 255, 0.08) 0%,
+          rgba(255, 255, 255, 0.02) 60%,
         );
-
-        border: 1px solid rgba(167, 214, 162, 0.45);
-
-        box-shadow: 0 0 12px rgba(167, 214, 162, 0.25),
+        border: 2px solid rgba(255, 255, 255, 0.6);
+        box-shadow: 0 0 12px rgba(255, 255, 255, 0.25),
           inset 0 0 6px rgba(255, 255, 255, 0.08);
-
         backdrop-filter: blur(6px);
       }
 
@@ -192,7 +196,7 @@
         margin-top: 6px;
         font-size: 12px;
         color: #ffffff;
-        opacity: 0.85;
+        opacity: 0.75;
         line-height: 1.3;
         text-align: center;
       }
@@ -229,19 +233,23 @@
       </div>
     </div>
 
-    <div id="carbonStatus" class="carbon-badge">Loading…</div>
+    <div class="context-row">
+     <div class="country-container">
+      <label for="countrySelect">Country:</label>
+      <div class="country-row">
+        <select id="countrySelect">
+          <option value="" disabled selected>Select country</option>
+          <option value="DE">Germany</option>
+          <option value="IS">Iceland</option>
+          <option value="CZ">Czech Republic</option>
+        </select>
+        <div id="carbonStatus" class="carbon-badge">Loading…</div>
+      </div>
+     </div>
+    </div>
+
     <div id="greenTip" class="green-tip"></div>
     <div id="co2EquivalenceText"></div>
-
-    <div class="country-container">
-      <label for="countrySelect">Country:</label>
-      <select id="countrySelect">
-        <option value="" disabled selected>Select country</option>
-        <option value="DE">Germany</option>
-        <option value="IS">Iceland</option>
-        <option value="CZ">Czech Republic</option>
-      </select>
-    </div>
 
     <div id="emissionAccordion" style="width: 90%; margin-top: 14px"></div>
 
